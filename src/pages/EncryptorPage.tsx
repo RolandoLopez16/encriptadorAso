@@ -60,15 +60,17 @@ export default function EncryptorPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
-      {/* LOGO en parte superior derecha */}
-      {/* LOGO centrado arriba */}
-      <div className="absolute top-40 left-1/2 -translate-x-1/2">
+
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 flex flex-col items-center w-full px-4">
+        <div className="w-full h-px bg-neutral mb-3"></div>
         <img
           src="/logo.png"
           alt="Logo ASOPREVISUAL"
           className="h-20 sm:h-24 max-h-[96px] object-contain drop-shadow"
         />
+        <div className="w-full h-px bg-neutral mt-3"></div>
       </div>
+
 
 
       {/* Tarjeta principal */}
@@ -106,8 +108,8 @@ export default function EncryptorPage() {
           {/* Mensaje visual */}
           {message && (
             <div className={`mt-2 text-sm px-4 py-2 rounded shadow-sm ${message.type === 'success'
-                ? 'bg-green-100 text-green-800 border border-green-300'
-                : 'bg-red-100 text-red-800 border border-red-300'
+              ? 'bg-green-100 text-green-800 border border-green-300'
+              : 'bg-red-100 text-red-800 border border-red-300'
               }`}>
               {message.text}
             </div>
