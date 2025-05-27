@@ -47,13 +47,9 @@ export default function EncryptorPage() {
       }
 
       setMessage({ type: 'success', text: 'Todos los archivos fueron encriptados correctamente 🎉' });
-
-      // Limpiar archivos pero mantener la llave
       setSelectedFiles([]);
       setInputKey(Date.now().toString());
-      setTimeout(() => setMessage(null), 5000); // Oculta el mensaje a los 5 segundos
-
-
+      setTimeout(() => setMessage(null), 5000);
     } catch (err) {
       console.error('Error general de encriptación:', err);
       setMessage({ type: 'error', text: 'Falló el proceso de encriptación. Verifica la llave pública.' });
@@ -63,7 +59,19 @@ export default function EncryptorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 relative">
+      {/* LOGO en parte superior derecha */}
+      {/* LOGO centrado arriba */}
+      <div className="absolute top-40 left-1/2 -translate-x-1/2">
+        <img
+          src="/logo.png"
+          alt="Logo ASOPREVISUAL"
+          className="h-20 sm:h-24 max-h-[96px] object-contain drop-shadow"
+        />
+      </div>
+
+
+      {/* Tarjeta principal */}
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-primary flex items-center gap-2">
           <Lock className="w-6 h-6" /> Encriptador ASOPREVISUAL
@@ -76,14 +84,14 @@ export default function EncryptorPage() {
           </div>
           <PublicKeyUploader publicKey={publicKey} setPublicKey={setPublicKey} />
 
-          {/* Selector de archivos */}
+          {/* Archivos */}
           <div className="flex items-center gap-2 text-primary-dark font-medium">
             <File className="w-4 h-4" /> Seleccionar archivos
           </div>
           <FileSelector onFilesSelected={setSelectedFiles} resetKey={inputKey} />
           <FileList files={selectedFiles} onRemove={handleRemoveFile} />
 
-          {/* Botón limpiar archivos */}
+          {/* Botón limpiar */}
           {selectedFiles.length > 0 && (
             <div className="flex justify-end">
               <button
@@ -97,16 +105,15 @@ export default function EncryptorPage() {
 
           {/* Mensaje visual */}
           {message && (
-            <div className={`mt-2 text-sm px-4 py-2 rounded shadow-sm ${
-              message.type === 'success'
+            <div className={`mt-2 text-sm px-4 py-2 rounded shadow-sm ${message.type === 'success'
                 ? 'bg-green-100 text-green-800 border border-green-300'
                 : 'bg-red-100 text-red-800 border border-red-300'
-            }`}>
+              }`}>
               {message.text}
             </div>
           )}
 
-          {/* Botón de encriptar */}
+          {/* Botón encriptar */}
           <EncryptButton
             disabled={selectedFiles.length === 0 || !publicKey || encrypting}
             onClick={handleEncrypt}
