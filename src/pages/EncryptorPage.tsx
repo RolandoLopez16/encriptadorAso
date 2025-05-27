@@ -80,13 +80,13 @@ export default function EncryptorPage() {
         <div className="space-y-4">
           {/* Llave pública */}
           <div className="flex items-center gap-2 text-primary-dark font-medium">
-            <KeyRound className="w-4 h-4" /> Llave pública
+            <KeyRound className="w-4 h-4" /> Cargue la llave pública.
           </div>
           <PublicKeyUploader publicKey={publicKey} setPublicKey={setPublicKey} />
 
           {/* Archivos */}
           <div className="flex items-center gap-2 text-primary-dark font-medium">
-            <File className="w-4 h-4" /> Seleccionar archivos
+            <File className="w-4 h-4" /> Seleccionar archivos a encriptar.
           </div>
           <FileSelector onFilesSelected={setSelectedFiles} resetKey={inputKey} />
           <FileList files={selectedFiles} onRemove={handleRemoveFile} />
