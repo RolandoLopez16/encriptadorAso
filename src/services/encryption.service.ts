@@ -19,17 +19,19 @@ export async function importPublicKey(pem: string): Promise<CryptoKey> {
 }
 
 // Cifra un archivo y genera claves + descarga
-export async function encryptFile(file: File, publicKey: CryptoKey) {
-  const data = await fileToArrayBuffer(file);
+export async function encryptFile(file: File, publicKey: CryptoKey, nit: string, tipo: string) {
+  const data = await file.arrayBuffer();
   const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, data);
   const exportedKey = await crypto.subtle.exportKey('raw', aesKey);
   const encryptedKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, exportedKey);
 
-  downloadFile(encryptedContent, `${file.name}.enc`);
-  downloadFile(encryptedKey, `${file.name}.key`);
+  const baseName = `${tipo}_${nit}_${file.name}`;
+  downloadFile(encryptedContent, `${baseName}.enc`);
+  downloadFile(encryptedKey, `${baseName}.key`);
 }
+
 
 function downloadFile(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer]);
