@@ -19,11 +19,21 @@ export async function importPublicKey(pem: string): Promise<CryptoKey> {
 }
 
 // Cifra un archivo y genera claves + descarga (.enc y .key)
-export async function encryptFile(file: File, publicKey: CryptoKey, nit: string, tipo: string) {
+export async function encryptFile(
+  file: File,
+  publicKey: CryptoKey,
+  nit: string,
+  tipo: string,
+  mantenerNombreOriginal: boolean
+) {
   const fileBuffer = await file.arrayBuffer();
   const fileExtension = `.${file.name.split('.').pop()}`;
   const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-  const fileNameBase = `${tipo}_${nit}_${fileNameWithoutExt}`;
+
+  // Nombre final base
+  const fileNameBase = mantenerNombreOriginal
+    ? fileNameWithoutExt
+    : `${tipo}_${nit}_${fileNameWithoutExt}`;
 
   // Convertir extensión a bytes
   const extensionBytes = new TextEncoder().encode(fileExtension);
@@ -34,23 +44,26 @@ export async function encryptFile(file: File, publicKey: CryptoKey, nit: string,
   const aesKey = await crypto.subtle.generateKey({ name: 'AES-CBC', length: 256 }, true, ['encrypt']);
   const iv = crypto.getRandomValues(new Uint8Array(16));
 
-  // Cifrar archivo con AES-CBC
+  // Cifrar contenido
   const encryptedContent = await crypto.subtle.encrypt(
     { name: 'AES-CBC', iv },
     aesKey,
     fileBuffer
   );
 
-  // Unir: [longitud extensión][extensión][IV][contenido cifrado]
+  // Estructura final: [extLen][ext][IV][contenido cifrado]
   const fullEncryptedBuffer = new Uint8Array(
     4 + extensionBytes.length + iv.length + encryptedContent.byteLength
   );
   fullEncryptedBuffer.set(extensionLengthBuffer, 0);
   fullEncryptedBuffer.set(extensionBytes, 4);
   fullEncryptedBuffer.set(iv, 4 + extensionBytes.length);
-  fullEncryptedBuffer.set(new Uint8Array(encryptedContent), 4 + extensionBytes.length + iv.length);
+  fullEncryptedBuffer.set(
+    new Uint8Array(encryptedContent),
+    4 + extensionBytes.length + iv.length
+  );
 
-  // Exportar y cifrar la clave AES con RSA pública
+  // Exportar y cifrar la clave AES
   const rawKey = await crypto.subtle.exportKey('raw', aesKey);
   const encryptedKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, rawKey);
 

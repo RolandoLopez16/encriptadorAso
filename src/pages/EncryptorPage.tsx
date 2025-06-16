@@ -19,6 +19,7 @@ export default function EncryptorPage() {
   const [nit, setNit] = useState<string>('');
   const [nitLocked, setNitLocked] = useState<boolean>(false);
   const [tipo, setTipo] = useState<string>('CRC');
+  const [mantenerNombreOriginal, setMantenerNombreOriginal] = useState<boolean>(false);
 
   const tiposDeDocumento = ['CRC', 'CUV', 'FEV', 'RIPS', 'HEV', 'PDE', 'PDX'];
 
@@ -54,7 +55,7 @@ export default function EncryptorPage() {
       const resultados = await Promise.all(
         selectedFiles.map(async (file) => {
           try {
-            await encryptFile(file, key, nit, tipo);
+            await encryptFile(file, key, nit, tipo, mantenerNombreOriginal);
             return { file, success: true };
           } catch (error) {
             return { file, success: false, error };
@@ -65,7 +66,7 @@ export default function EncryptorPage() {
       const fallidos = resultados.filter(r => !r.success);
       const exitosos = resultados.filter(r => r.success);
 
-      // 🧾 Generar log.csv
+      // Generar log.csv
       const logCsv = [
         'Nombre del Archivo,Estado',
         ...resultados.map(r => `${r.file.name},${r.success ? 'OK' : 'ERROR'}`)
@@ -121,13 +122,13 @@ export default function EncryptorPage() {
         </h2>
 
         <div className="space-y-4">
-          {/* Sección llave pública */}
+          {/* Llave pública */}
           <div className="flex items-center gap-2 text-primary-dark font-medium">
             <KeyRound className="w-4 h-4" /> Cargue la llave pública.
           </div>
           <PublicKeyUploader publicKey={publicKey} setPublicKey={setPublicKey} />
 
-          {/* Sección NIT */}
+          {/* NIT */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <label className="text-sm text-text-main font-medium flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
               <span className="text-primary-dark font-semibold">Digite su NIT:</span>
@@ -169,23 +170,43 @@ export default function EncryptorPage() {
             </label>
           </div>
 
-          {/* Sección tipo */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Tipo y switch */}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-primary-dark font-medium">
               <File className="w-4 h-4" /> Seleccionar archivos a encriptar.
             </div>
-            <label className="text-sm text-primary-dark font-semibold flex items-center gap-2">
-              seleccione tipo:
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value)}
-                className="border border-neutral rounded px-2 py-1 text-sm"
-              >
-                {tiposDeDocumento.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </label>
+
+            <div className="flex items-center gap-4">
+              <label className="text-sm text-primary-dark font-semibold flex items-center gap-2">
+                Tipo:
+                <select
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  className="border border-neutral rounded px-2 py-1 text-sm"
+                >
+                  {tiposDeDocumento.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </label>
+
+              {/* Switch mantener nombre */}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-primary-dark font-semibold">Nombre original:</label>
+                <button
+                  onClick={() => setMantenerNombreOriginal(!mantenerNombreOriginal)}
+                  className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${
+                    mantenerNombreOriginal ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <div
+                    className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                      mantenerNombreOriginal ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Archivos */}
