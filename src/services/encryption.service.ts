@@ -1,4 +1,15 @@
-// Convierte un archivo a ArrayBuffer
+// Convierte base64 a ArrayBuffer
+function str2ab(base64: string): ArrayBuffer {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+// Exportado por otros componentes
 export async function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
   return await file.arrayBuffer();
 }
@@ -18,7 +29,7 @@ export async function importPublicKey(pem: string): Promise<CryptoKey> {
   );
 }
 
-// Cifra un archivo y genera claves + descarga (.enc y .key)
+// Encripta un archivo según la estructura oficial
 export async function encryptFile(
   file: File,
   publicKey: CryptoKey,
@@ -30,49 +41,57 @@ export async function encryptFile(
   const fileExtension = `.${file.name.split('.').pop()}`;
   const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
 
-  // Nombre final base
+  // Nombre final del archivo
   const fileNameBase = mantenerNombreOriginal
     ? fileNameWithoutExt
     : `${tipo}_${nit}_${fileNameWithoutExt}`;
 
-  // Convertir extensión a bytes
+  // 1. Convertir extensión a bytes
   const extensionBytes = new TextEncoder().encode(fileExtension);
   const extensionLengthBuffer = new Uint8Array(4);
   new DataView(extensionLengthBuffer.buffer).setUint32(0, extensionBytes.length, false);
 
-  // AES-CBC requiere clave de 32 bytes y IV de 16 bytes
-  const aesKey = await crypto.subtle.generateKey({ name: 'AES-CBC', length: 256 }, true, ['encrypt']);
+  // 2. Generar clave AES y IV
+  const aesKey = await crypto.subtle.generateKey(
+    { name: 'AES-CBC', length: 256 },
+    true,
+    ['encrypt']
+  );
   const iv = crypto.getRandomValues(new Uint8Array(16));
 
-  // Cifrar contenido
+  // 3. Cifrar contenido
   const encryptedContent = await crypto.subtle.encrypt(
     { name: 'AES-CBC', iv },
     aesKey,
     fileBuffer
   );
 
-  // Estructura final: [extLen][ext][IV][contenido cifrado]
-  const fullEncryptedBuffer = new Uint8Array(
+  // 4. Unir [4 bytes extLen] + [ext] + [IV] + [contenido]
+  const finalEncryptedFile = new Uint8Array(
     4 + extensionBytes.length + iv.length + encryptedContent.byteLength
   );
-  fullEncryptedBuffer.set(extensionLengthBuffer, 0);
-  fullEncryptedBuffer.set(extensionBytes, 4);
-  fullEncryptedBuffer.set(iv, 4 + extensionBytes.length);
-  fullEncryptedBuffer.set(
+  finalEncryptedFile.set(extensionLengthBuffer, 0);
+  finalEncryptedFile.set(extensionBytes, 4);
+  finalEncryptedFile.set(iv, 4 + extensionBytes.length);
+  finalEncryptedFile.set(
     new Uint8Array(encryptedContent),
     4 + extensionBytes.length + iv.length
   );
 
-  // Exportar y cifrar la clave AES
+  // 5. Exportar y cifrar la clave AES
   const rawKey = await crypto.subtle.exportKey('raw', aesKey);
-  const encryptedKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, rawKey);
+  const encryptedAesKey = await crypto.subtle.encrypt(
+    { name: 'RSA-OAEP' },
+    publicKey,
+    rawKey
+  );
 
-  // Descargar archivos .enc y .key
-  downloadFile(fullEncryptedBuffer.buffer, `${fileNameBase}.enc`);
-  downloadFile(encryptedKey, `${fileNameBase}.key`);
+  // 6. Descargar archivos
+  downloadFile(finalEncryptedFile.buffer, `${fileNameBase}.enc`);
+  downloadFile(encryptedAesKey, `${fileNameBase}.key`);
 }
 
-// Descarga archivo desde un buffer
+// Descarga un archivo a partir de un buffer
 function downloadFile(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer]);
   const link = document.createElement('a');
@@ -80,15 +99,4 @@ function downloadFile(buffer: ArrayBuffer, filename: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(link.href);
-}
-
-// Base64 a ArrayBuffer
-function str2ab(base64: string): ArrayBuffer {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
 }
