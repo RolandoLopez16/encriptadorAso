@@ -18,21 +18,48 @@ export async function importPublicKey(pem: string): Promise<CryptoKey> {
   );
 }
 
-// Cifra un archivo y genera claves + descarga
+// Cifra un archivo y genera claves + descarga (.enc y .key)
 export async function encryptFile(file: File, publicKey: CryptoKey, nit: string, tipo: string) {
-  const data = await file.arrayBuffer();
-  const aesKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encryptedContent = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, data);
-  const exportedKey = await crypto.subtle.exportKey('raw', aesKey);
-  const encryptedKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, exportedKey);
+  const fileBuffer = await file.arrayBuffer();
+  const fileExtension = `.${file.name.split('.').pop()}`;
+  const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+  const fileNameBase = `${tipo}_${nit}_${fileNameWithoutExt}`;
 
-  const baseName = `${tipo}_${nit}_${file.name}`;
-  downloadFile(encryptedContent, `${baseName}.enc`);
-  downloadFile(encryptedKey, `${baseName}.key`);
+  // Convertir extensión a bytes
+  const extensionBytes = new TextEncoder().encode(fileExtension);
+  const extensionLengthBuffer = new Uint8Array(4);
+  new DataView(extensionLengthBuffer.buffer).setUint32(0, extensionBytes.length, false);
+
+  // AES-CBC requiere clave de 32 bytes y IV de 16 bytes
+  const aesKey = await crypto.subtle.generateKey({ name: 'AES-CBC', length: 256 }, true, ['encrypt']);
+  const iv = crypto.getRandomValues(new Uint8Array(16));
+
+  // Cifrar archivo con AES-CBC
+  const encryptedContent = await crypto.subtle.encrypt(
+    { name: 'AES-CBC', iv },
+    aesKey,
+    fileBuffer
+  );
+
+  // Unir: [longitud extensión][extensión][IV][contenido cifrado]
+  const fullEncryptedBuffer = new Uint8Array(
+    4 + extensionBytes.length + iv.length + encryptedContent.byteLength
+  );
+  fullEncryptedBuffer.set(extensionLengthBuffer, 0);
+  fullEncryptedBuffer.set(extensionBytes, 4);
+  fullEncryptedBuffer.set(iv, 4 + extensionBytes.length);
+  fullEncryptedBuffer.set(new Uint8Array(encryptedContent), 4 + extensionBytes.length + iv.length);
+
+  // Exportar y cifrar la clave AES con RSA pública
+  const rawKey = await crypto.subtle.exportKey('raw', aesKey);
+  const encryptedKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, publicKey, rawKey);
+
+  // Descargar archivos .enc y .key
+  downloadFile(fullEncryptedBuffer.buffer, `${fileNameBase}.enc`);
+  downloadFile(encryptedKey, `${fileNameBase}.key`);
 }
 
-
+// Descarga archivo desde un buffer
 function downloadFile(buffer: ArrayBuffer, filename: string) {
   const blob = new Blob([buffer]);
   const link = document.createElement('a');
@@ -42,6 +69,7 @@ function downloadFile(buffer: ArrayBuffer, filename: string) {
   URL.revokeObjectURL(link.href);
 }
 
+// Base64 a ArrayBuffer
 function str2ab(base64: string): ArrayBuffer {
   const binaryString = atob(base64);
   const len = binaryString.length;

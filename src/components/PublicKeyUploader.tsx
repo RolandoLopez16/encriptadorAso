@@ -28,6 +28,8 @@ export default function PublicKeyUploader({ publicKey, setPublicKey }: PublicKey
       {publicKey ? (
         <div className="flex items-center justify-between bg-neutral px-3 py-2 rounded">
           <span className="text-sm text-text-main truncate">{publicKey.name}</span>
+          <p className="text-xs text-primary mt-1">Llave pública cargada correctamente</p>
+
           <button
             onClick={handleRemove}
             className="text-red-500 hover:text-red-700 transition"
