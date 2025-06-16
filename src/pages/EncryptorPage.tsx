@@ -157,9 +157,9 @@ export default function EncryptorPage() {
                 <option value="CUV">CUV</option>
                 <option value="FEV">FEV</option>
                 <option value="RIPS">RIPS</option>
-                <option value="RIPS">HEV</option>
-                <option value="RIPS">PDE</option>
-                <option value="RIPS">PDX</option>
+                <option value="HEV">HEV</option>
+                <option value="PDE">PDE</option>
+                <option value="PDX">PDX</option>
               </select>
             </label>
           </div>
