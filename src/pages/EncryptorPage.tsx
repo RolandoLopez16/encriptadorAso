@@ -20,6 +20,8 @@ export default function EncryptorPage() {
   const [nitLocked, setNitLocked] = useState<boolean>(false);
   const [tipo, setTipo] = useState<string>('CRC');
 
+  const tiposDeDocumento = ['CRC', 'CUV', 'FEV', 'RIPS', 'HEV', 'PDE', 'PDX'];
+
   useEffect(() => {
     const savedNit = localStorage.getItem(STORAGE_KEYS.nit);
     if (savedNit) {
@@ -49,19 +51,26 @@ export default function EncryptorPage() {
       const pem = await publicKey.text();
       const key = await importPublicKey(pem);
 
-      for (const file of selectedFiles) {
-        try {
-          await encryptFile(file, key, nit, tipo);
+      const results = await Promise.allSettled(
+        selectedFiles.map((file) =>
+          encryptFile(file, key, nit, tipo)
+            .then(() => ({ file, status: 'fulfilled' }))
+            .catch((error) => ({ file, error, status: 'rejected' }))
+        )
+      );
 
-        } catch (fileErr) {
-          console.error(`Error encriptando archivo ${file.name}:`, fileErr);
-          setMessage({ type: 'error', text: `Error encriptando archivo: ${file.name}` });
-          setEncrypting(false);
-          return;
-        }
+      const fallidos = results.filter((r) => r.status === 'rejected');
+      const exitosos = results.filter((r) => r.status === 'fulfilled');
+
+      if (fallidos.length > 0) {
+        setMessage({
+          type: 'error',
+          text: `Fallaron ${fallidos.length} archivos: ${fallidos.map(f => f.file.name).join(', ')}`
+        });
+      } else {
+        setMessage({ type: 'success', text: 'Todos los archivos fueron encriptados correctamente 🎉' });
       }
 
-      setMessage({ type: 'success', text: 'Todos los archivos fueron encriptados correctamente 🎉' });
       setSelectedFiles([]);
       setInputKey(Date.now().toString());
       setTimeout(() => setMessage(null), 5000);
@@ -153,13 +162,9 @@ export default function EncryptorPage() {
                 onChange={(e) => setTipo(e.target.value)}
                 className="border border-neutral rounded px-2 py-1 text-sm"
               >
-                <option value="CRC">CRC</option>
-                <option value="CUV">CUV</option>
-                <option value="FEV">FEV</option>
-                <option value="RIPS">RIPS</option>
-                <option value="HEV">HEV</option>
-                <option value="PDE">PDE</option>
-                <option value="PDX">PDX</option>
+                {tiposDeDocumento.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
               </select>
             </label>
           </div>
