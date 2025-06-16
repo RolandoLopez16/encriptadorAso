@@ -51,21 +51,40 @@ export default function EncryptorPage() {
       const pem = await publicKey.text();
       const key = await importPublicKey(pem);
 
-      const results = await Promise.allSettled(
-        selectedFiles.map((file) =>
-          encryptFile(file, key, nit, tipo)
-            .then(() => ({ file, status: 'fulfilled' }))
-            .catch((error) => ({ file, error, status: 'rejected' }))
-        )
+      const resultados = await Promise.all(
+        selectedFiles.map(async (file) => {
+          try {
+            await encryptFile(file, key, nit, tipo);
+            return { file, success: true };
+          } catch (error) {
+            return { file, success: false, error };
+          }
+        })
       );
 
-      const fallidos = results.filter((r) => r.status === 'rejected');
-      const exitosos = results.filter((r) => r.status === 'fulfilled');
+      const fallidos = resultados.filter(r => !r.success);
+      const exitosos = resultados.filter(r => r.success);
+
+      // 🧾 Generar log.csv
+      const logCsv = [
+        'Nombre del Archivo,Estado',
+        ...resultados.map(r => `${r.file.name},${r.success ? 'OK' : 'ERROR'}`)
+      ].join('\n');
+
+      const blob = new Blob([logCsv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `log_${Date.now()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       if (fallidos.length > 0) {
         setMessage({
           type: 'error',
-          text: `Fallaron ${fallidos.length} archivos: ${fallidos.map(f => f.file.name).join(', ')}`
+          text: `Fallaron ${fallidos.length} archivo(s): ${fallidos.map(f => f.file.name).join(', ')}`
         });
       } else {
         setMessage({ type: 'success', text: 'Todos los archivos fueron encriptados correctamente 🎉' });
