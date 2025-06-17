@@ -1,8 +1,7 @@
-import { IncomingMessage, ServerResponse } from 'http'
-import * as crypto from 'crypto'
-import * as fs from 'fs'
-import * as path from 'path'
-import formidable from 'formidable'
+const crypto = require('crypto')
+const fs = require('fs')
+const path = require('path')
+const formidable = require('formidable')
 
 export const config = {
   api: {
@@ -10,7 +9,7 @@ export const config = {
   },
 }
 
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+module.exports = async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     res.statusCode = 405
     res.setHeader('Content-Type', 'application/json')
@@ -20,7 +19,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const form = formidable({ multiples: false })
 
-  form.parse(req, async (err, fields, files) => {
+  form.parse(req, async (err: any, fields: any, files: any) => {
     if (err || !files.file) {
       console.error('Error al parsear el formulario:', err)
       res.statusCode = 500
@@ -56,7 +55,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
       const publicKey = process.env.PUBLIC_KEY_PEM || ''
       if (!publicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
-        throw new Error('Clave pública inválida o no definida en entorno')
+        console.error('Clave pública inválida o ausente')
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ message: 'Clave pública inválida o no definida' }))
+        return
       }
 
       const encryptedAesKey = crypto.publicEncrypt(
