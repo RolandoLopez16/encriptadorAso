@@ -3,17 +3,22 @@
 import React, { useState } from 'react'
 
 const EncryptUploader: React.FC = () => {
-  const [files, setFiles] = useState<File[]>([])
-  const [nit, setNit] = useState('')
-  const [tipo, setTipo] = useState('CRC')
-  const [mantenerNombreOriginal, setMantenerNombreOriginal] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [downloadLinks, setDownloadLinks] = useState<{ enc: string; key: string } | null>(null)
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0])
+      setMessage('')
+      setDownloadLinks(null)
+    }
+  }
+
   const handleEncrypt = async () => {
-    if (files.length === 0 || !nit) {
-      setMessage('⚠️ NIT y archivo(s) requeridos.')
+    if (!selectedFile) {
+      setMessage('⚠️ Debes seleccionar un archivo primero.')
       return
     }
 
@@ -22,29 +27,25 @@ const EncryptUploader: React.FC = () => {
     setDownloadLinks(null)
 
     const formData = new FormData()
-    files.forEach(file => formData.append('files', file))
-    formData.append('nit', nit)
-    formData.append('tipo', tipo)
-    formData.append('nombreOriginal', mantenerNombreOriginal.toString())
+    formData.append('file', selectedFile)
 
     try {
       const res = await fetch('/api/encrypt', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
 
-      if (!res.ok) throw new Error('Error al encriptar.')
+      if (!res.ok) throw new Error('Error en el servidor.')
 
       const { encryptedFile, encryptedKey } = await res.json()
 
       const encBlob = new Blob([Uint8Array.from(atob(encryptedFile), c => c.charCodeAt(0))])
       const keyBlob = new Blob([Uint8Array.from(atob(encryptedKey), c => c.charCodeAt(0))])
 
-      setDownloadLinks({
-        enc: URL.createObjectURL(encBlob),
-        key: URL.createObjectURL(keyBlob)
-      })
+      const encUrl = URL.createObjectURL(encBlob)
+      const keyUrl = URL.createObjectURL(keyBlob)
 
+      setDownloadLinks({ enc: encUrl, key: keyUrl })
       setMessage('✅ Archivo cifrado exitosamente.')
     } catch (err) {
       console.error(err)
@@ -55,53 +56,19 @@ const EncryptUploader: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 p-6 bg-white rounded-xl shadow max-w-xl mx-auto">
-      <h2 className="text-xl font-bold text-green-800">🔒 Encriptador ASOPREVISUAL</h2>
-
-      <div>
-        <label className="block font-medium text-gray-700">Digite su NIT:</label>
-        <input
-          type="text"
-          value={nit}
-          onChange={e => setNit(e.target.value)}
-          className="w-full border p-2 rounded mt-1"
-        />
-      </div>
-
-      <div className="flex gap-4 items-center">
-        <label className="font-medium text-gray-700">Tipo:</label>
-        <select value={tipo} onChange={e => setTipo(e.target.value)} className="border p-2 rounded">
-          <option>CRC</option>
-          <option>CUV</option>
-          <option>FEV</option>
-          <option>RIPS</option>
-        </select>
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={mantenerNombreOriginal}
-            onChange={() => setMantenerNombreOriginal(!mantenerNombreOriginal)}
-          />
-          Nombre original
-        </label>
-      </div>
-
-      <div>
-        <input
-          type="file"
-          multiple
-          onChange={e => setFiles(e.target.files ? Array.from(e.target.files) : [])}
-          className="block w-full border p-2 rounded"
-        />
-      </div>
-
+    <div className="p-4 border rounded-xl shadow-md max-w-md mx-auto bg-white space-y-4">
+      <h2 className="text-xl font-semibold">Cifrar archivo</h2>
+      <input
+        type="file"
+        onChange={handleFileChange}
+        className="block w-full border p-2 rounded"
+      />
       <button
         onClick={handleEncrypt}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
         disabled={loading}
-        className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 disabled:opacity-50"
       >
-        {loading ? 'Cifrando...' : 'Encriptar archivos'}
+        {loading ? 'Cifrando...' : 'Cifrar archivo'}
       </button>
 
       {message && <p className="text-sm">{message}</p>}
