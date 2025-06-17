@@ -12,7 +12,6 @@ export const config = {
   },
 }
 
-// Ruta absoluta a la llave pública
 const publicKeyPath = path.resolve(process.cwd(), 'secrets', 'public_key.pem')
 
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
@@ -25,10 +24,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const form = formidable({ multiples: false })
 
-  form.parse(req, async (err, fields, files) => {
+  form.parse(req, async (err: any, fields: formidable.Fields, files: formidable.Files) => {
     if (err || !files.file) {
-      console.error('Error al parsear formulario:', err)
+      console.error('Error al parsear el formulario:', err)
       res.statusCode = 500
+      res.setHeader('Content-Type', 'application/json')
       res.end(JSON.stringify({ message: 'Error al procesar el archivo' }))
       return
     }
@@ -37,23 +37,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const fileBuffer = fs.readFileSync(file.filepath)
     const fileExtension = path.extname(file.originalFilename || '') || '.bin'
 
-    // 1. Extensión en bytes
     const extensionLengthBuffer = Buffer.alloc(4)
     extensionLengthBuffer.writeUInt32BE(fileExtension.length, 0)
     const extensionBuffer = Buffer.from(fileExtension, 'utf-8')
 
-    // 2. Clave AES y IV
     const aesKey = crypto.randomBytes(32)
     const iv = crypto.randomBytes(16)
 
-    // 3. Cifrado AES
     const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv)
     const encryptedFile = Buffer.concat([
       cipher.update(fileBuffer),
       cipher.final(),
     ])
 
-    // 4. Construir archivo cifrado final
     const finalEncryptedFile = Buffer.concat([
       extensionLengthBuffer,
       extensionBuffer,
@@ -61,7 +57,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       encryptedFile,
     ])
 
-    // 5. Cifrar clave AES con RSA pública
     const publicKey = fs.readFileSync(publicKeyPath, 'utf-8')
     const encryptedAesKey = crypto.publicEncrypt(
       {
@@ -71,7 +66,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       aesKey
     )
 
-    // 6. Responder en base64
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({
