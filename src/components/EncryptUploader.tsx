@@ -1,5 +1,3 @@
-// src/components/EncryptUploader.tsx
-
 import React, { useState } from 'react'
 
 const EncryptUploader: React.FC = () => {
@@ -71,15 +69,27 @@ const EncryptUploader: React.FC = () => {
         {loading ? 'Cifrando...' : 'Cifrar archivo'}
       </button>
 
-      {message && <p className="text-sm">{message}</p>}
+      {message && (
+        <p className={`text-sm ${message.includes('✅') ? 'text-green-600' : 'text-red-600'}`}>
+          {message}
+        </p>
+      )}
 
       {downloadLinks && (
         <div className="space-y-2">
-          <a href={downloadLinks.enc} download="archivo.enc" className="text-blue-600 underline">
-            Descargar .enc
+          <a
+            href={downloadLinks.enc}
+            download="archivo.enc"
+            className="text-blue-600 underline block"
+          >
+            📄 Descargar archivo cifrado (.enc)
           </a>
-          <a href={downloadLinks.key} download="clave.key" className="text-blue-600 underline">
-            Descargar .key
+          <a
+            href={downloadLinks.key}
+            download="clave.key"
+            className="text-blue-600 underline block"
+          >
+            🔑 Descargar clave cifrada (.key)
           </a>
         </div>
       )}
