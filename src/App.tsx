@@ -1,7 +1,9 @@
-import EncryptorPage from './pages/EncryptorPage'
+import EncryptUploader from './components/EncryptUploader'
 
-function App() {
-  return <EncryptorPage />
+export default function App() {
+  return (
+    <main className="min-h-screen bg-gray-100 p-6">
+      <EncryptUploader />
+    </main>
+  )
 }
-
-export default App
