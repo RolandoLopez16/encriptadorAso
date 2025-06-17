@@ -1,7 +1,10 @@
-const crypto = require('crypto')
-const fs = require('fs')
-const path = require('path')
-const formidable = require('formidable')
+// api/encrypt.ts
+
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import formidable from 'formidable'
+import * as crypto from 'crypto'
+import path from 'path'
+import { Buffer } from 'buffer'
 
 export const config = {
   api: {
@@ -9,28 +12,25 @@ export const config = {
   },
 }
 
-module.exports = async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
-    res.statusCode = 405
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ message: 'Method not allowed' }))
+    res.status(405).json({ message: 'Method not allowed' })
     return
   }
 
   const form = formidable({ multiples: false })
 
-  form.parse(req, async (err: any, fields: any, files: any) => {
-    if (err || !files.file) {
-      console.error('Error al parsear el formulario:', err)
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ message: 'Error al procesar el archivo' }))
-      return
-    }
-
+  form.parse(req, async (err, fields, files) => {
     try {
+      if (err || !files.file) {
+        console.error('Error al parsear formulario:', err)
+        return res.status(500).json({ message: 'Error al procesar el archivo' })
+      }
+
       const file = Array.isArray(files.file) ? files.file[0] : files.file
-      const fileBuffer = fs.readFileSync(file.filepath)
+
+      const fileBuffer: Buffer = await file.toBuffer?.() ??
+        Buffer.from(await file.filepath?.writeStream?.chunks?.[0] ?? '')
 
       const fileExtension = path.extname(file.originalFilename || '') || '.bin'
       const extensionLengthBuffer = Buffer.alloc(4)
@@ -41,10 +41,7 @@ module.exports = async function handler(req: any, res: any) {
       const iv = crypto.randomBytes(16)
 
       const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv)
-      const encryptedFile = Buffer.concat([
-        cipher.update(fileBuffer),
-        cipher.final(),
-      ])
+      const encryptedFile = Buffer.concat([cipher.update(fileBuffer), cipher.final()])
 
       const finalEncryptedFile = Buffer.concat([
         extensionLengthBuffer,
@@ -55,11 +52,7 @@ module.exports = async function handler(req: any, res: any) {
 
       const publicKey = process.env.PUBLIC_KEY_PEM || ''
       if (!publicKey.startsWith('-----BEGIN PUBLIC KEY-----')) {
-        console.error('Clave pública inválida o ausente')
-        res.statusCode = 500
-        res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ message: 'Clave pública inválida o no definida' }))
-        return
+        return res.status(500).json({ message: 'Clave pública inválida o no definida' })
       }
 
       const encryptedAesKey = crypto.publicEncrypt(
@@ -70,17 +63,13 @@ module.exports = async function handler(req: any, res: any) {
         aesKey
       )
 
-      res.statusCode = 200
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({
+      res.status(200).json({
         encryptedFile: finalEncryptedFile.toString('base64'),
         encryptedKey: encryptedAesKey.toString('base64'),
-      }))
-    } catch (error) {
-      console.error('Error durante el cifrado:', error)
-      res.statusCode = 500
-      res.setHeader('Content-Type', 'application/json')
-      res.end(JSON.stringify({ message: 'Fallo interno durante el cifrado' }))
+      })
+    } catch (error: any) {
+      console.error('❌ Error al cifrar archivo:', error)
+      res.status(500).json({ message: 'Error interno en el servidor', error: error.message })
     }
   })
 }
