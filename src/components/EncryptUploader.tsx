@@ -4,19 +4,23 @@ const EncryptUploader: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [downloadLinks, setDownloadLinks] = useState<{ enc: string; key: string } | null>(null)
-  const [baseName, setBaseName] = useState<string>('archivo')
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setSelectedFile(file)
+      setSelectedFile(e.target.files[0])
       setMessage('')
-      setDownloadLinks(null)
-
-      const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, '')
-      setBaseName(nameWithoutExtension)
     }
+  }
+
+  const downloadBlob = (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   const handleEncrypt = async () => {
@@ -27,7 +31,6 @@ const EncryptUploader: React.FC = () => {
 
     setLoading(true)
     setMessage('')
-    setDownloadLinks(null)
 
     const formData = new FormData()
     formData.append('file', selectedFile)
@@ -45,10 +48,15 @@ const EncryptUploader: React.FC = () => {
       const encBlob = new Blob([Uint8Array.from(atob(encryptedFile), c => c.charCodeAt(0))])
       const keyBlob = new Blob([Uint8Array.from(atob(encryptedKey), c => c.charCodeAt(0))])
 
-      const encUrl = URL.createObjectURL(encBlob)
-      const keyUrl = URL.createObjectURL(keyBlob)
+      // Obtener nombre base + extensión
+      const originalName = selectedFile.name
+      const baseName = originalName.replace(/\.[^/.]+$/, '')
+      const extension = originalName.slice(originalName.lastIndexOf('.'))
 
-      setDownloadLinks({ enc: encUrl, key: keyUrl })
+      // Descargar automáticamente
+      downloadBlob(encBlob, `${baseName}${extension}.enc`)
+      downloadBlob(keyBlob, `${baseName}${extension}.key`)
+
       setMessage('✅ Archivo cifrado exitosamente.')
     } catch (err) {
       console.error(err)
@@ -75,26 +83,6 @@ const EncryptUploader: React.FC = () => {
       </button>
 
       {message && <p className="text-sm">{message}</p>}
-
-      {downloadLinks && (
-        <div className="space-y-2">
-          <a
-            href={downloadLinks.enc}
-            download={`${baseName}.enc`}
-            className="text-blue-600 underline"
-          >
-            Descargar .enc
-          </a>
-          <br />
-          <a
-            href={downloadLinks.key}
-            download={`${baseName}.key`}
-            className="text-blue-600 underline"
-          >
-            Descargar .key
-          </a>
-        </div>
-      )}
     </div>
   )
 }
