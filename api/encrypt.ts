@@ -2,9 +2,9 @@
 
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import formidable from 'formidable'
-import * as crypto from 'crypto'
+import fs from 'fs'
 import path from 'path'
-import { Buffer } from 'buffer'
+import crypto from 'crypto'
 
 export const config = {
   api: {
@@ -12,7 +12,7 @@ export const config = {
   },
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ message: 'Method not allowed' })
     return
@@ -23,14 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   form.parse(req, async (err, fields, files) => {
     try {
       if (err || !files.file) {
-        console.error('Error al parsear formulario:', err)
+        console.error('❌ Error al parsear formulario:', err)
         return res.status(500).json({ message: 'Error al procesar el archivo' })
       }
 
       const file = Array.isArray(files.file) ? files.file[0] : files.file
-
-      const fileBuffer: Buffer = await file.toBuffer?.() ??
-        Buffer.from(await file.filepath?.writeStream?.chunks?.[0] ?? '')
+      const fileBuffer = fs.readFileSync(file.filepath)
 
       const fileExtension = path.extname(file.originalFilename || '') || '.bin'
       const extensionLengthBuffer = Buffer.alloc(4)
@@ -41,7 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const iv = crypto.randomBytes(16)
 
       const cipher = crypto.createCipheriv('aes-256-cbc', aesKey, iv)
-      const encryptedFile = Buffer.concat([cipher.update(fileBuffer), cipher.final()])
+      const encryptedFile = Buffer.concat([
+        cipher.update(fileBuffer),
+        cipher.final(),
+      ])
 
       const finalEncryptedFile = Buffer.concat([
         extensionLengthBuffer,
@@ -68,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         encryptedKey: encryptedAesKey.toString('base64'),
       })
     } catch (error: any) {
-      console.error('❌ Error al cifrar archivo:', error)
+      console.error('❌ Error interno:', error)
       res.status(500).json({ message: 'Error interno en el servidor', error: error.message })
     }
   })
