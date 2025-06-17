@@ -1,7 +1,7 @@
-import EncryptorPage from './pages/EncryptorPage';
+import EncryptorPage from './pages/EncryptorPage'
 
 function App() {
-  return <EncryptorPage />;
+  return <EncryptorPage />
 }
 
-export default App;
+export default App

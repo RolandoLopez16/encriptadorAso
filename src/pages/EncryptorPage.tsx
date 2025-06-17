@@ -6,6 +6,20 @@ import EncryptButton from '../components/EncryptButton';
 import { encryptFile, importPublicKey } from '../services/encryption.service';
 import { Lock, File, KeyRound, RotateCcw } from 'lucide-react';
 
+
+
+import EncryptUploader from '../components/EncryptUploader'
+
+function App() {
+  return (
+    <main className="min-h-screen bg-gray-100 p-6">
+      <EncryptUploader />
+    </main>
+  )
+}
+
+
+
 const STORAGE_KEYS = {
   nit: 'asoprevisual_nit',
 };
