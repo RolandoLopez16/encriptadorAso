@@ -176,7 +176,7 @@ const EncryptUploader: React.FC = () => {
 
           <button
             onClick={handleEncryptAll}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 mt-4"
+            className="bg-blue-600 w-full text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 mt-4"
             disabled={encryptionInProgress}
           >
             {encryptionInProgress ? 'Procesando...' : 'Encriptar todos'}
