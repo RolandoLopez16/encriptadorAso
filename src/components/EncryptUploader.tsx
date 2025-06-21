@@ -117,7 +117,7 @@ const EncryptUploader: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow space-y-4">
-      <h2 className="text-2xl font-bold">Encriptar múltiples archivos</h2>
+      <h2 className="text-2xl text-green-800 font-bold">🔒 Encriptar múltiples archivos</h2>
 
       <input
         type="file"
