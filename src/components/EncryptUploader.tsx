@@ -1,4 +1,3 @@
-// EncryptUploader.tsx (nuevo diseño con preview de múltiples archivos)
 import React, { useState } from 'react'
 
 type FileStatus = 'pendiente' | 'enviando' | 'completado' | 'error'
@@ -6,6 +5,7 @@ type FileStatus = 'pendiente' | 'enviando' | 'completado' | 'error'
 interface FileItem {
   file: File
   status: FileStatus
+  progress: number
   message?: string
 }
 
@@ -20,6 +20,7 @@ const EncryptUploader: React.FC = () => {
     const newFileItems: FileItem[] = selectedFiles.map(file => ({
       file,
       status: 'pendiente',
+      progress: 0,
     }))
 
     setFiles(newFileItems)
@@ -37,6 +38,8 @@ const EncryptUploader: React.FC = () => {
   }
 
   const encryptFile = async (fileItem: FileItem, index: number) => {
+    updateFileStatus(index, 'enviando', 10)
+
     const formData = new FormData()
     formData.append('file', fileItem.file)
 
@@ -47,6 +50,8 @@ const EncryptUploader: React.FC = () => {
       })
 
       if (!res.ok) throw new Error('Servidor no respondió correctamente.')
+
+      updateFileStatus(index, 'enviando', 60)
 
       const { encryptedFile, encryptedKey } = await res.json()
 
@@ -60,17 +65,27 @@ const EncryptUploader: React.FC = () => {
       downloadBlob(encBlob, `${baseName}${extension}.enc`)
       downloadBlob(keyBlob, `${baseName}${extension}.key`)
 
-      updateFileStatus(index, 'completado')
+      updateFileStatus(index, 'completado', 100)
     } catch (error: any) {
       console.error(error)
-      updateFileStatus(index, 'error', error.message || 'Error desconocido')
+      updateFileStatus(index, 'error', 0, error.message || 'Error desconocido')
     }
   }
 
-  const updateFileStatus = (index: number, status: FileStatus, message?: string) => {
+  const updateFileStatus = (
+    index: number,
+    status: FileStatus,
+    progress?: number,
+    message?: string
+  ) => {
     setFiles(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], status, message }
+      updated[index] = {
+        ...updated[index],
+        status,
+        progress: progress !== undefined ? progress : updated[index].progress,
+        message,
+      }
       return updated
     })
   }
@@ -79,11 +94,16 @@ const EncryptUploader: React.FC = () => {
     setEncryptionInProgress(true)
 
     for (let i = 0; i < files.length; i++) {
-      updateFileStatus(i, 'enviando')
-      await encryptFile(files[i], i)
+      if (files[i].status === 'pendiente' || files[i].status === 'error') {
+        await encryptFile(files[i], i)
+      }
     }
 
     setEncryptionInProgress(false)
+  }
+
+  const retryFile = async (index: number) => {
+    await encryptFile(files[index], index)
   }
 
   return (
@@ -105,6 +125,7 @@ const EncryptUploader: React.FC = () => {
                 <th className="text-left p-2">Archivo</th>
                 <th className="text-left p-2">Tamaño</th>
                 <th className="text-left p-2">Estado</th>
+                <th className="text-left p-2">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -114,10 +135,38 @@ const EncryptUploader: React.FC = () => {
                   <td className="p-2">{(item.file.size / 1024).toFixed(1)} KB</td>
                   <td className="p-2">
                     {item.status === 'pendiente' && <span className="text-gray-600">Pendiente</span>}
-                    {item.status === 'enviando' && <span className="text-blue-600">Enviando...</span>}
+                    {item.status === 'enviando' && (
+                      <div className="text-blue-600">
+                        Enviando...
+                        <div className="w-full bg-gray-200 h-2 mt-1 rounded">
+                          <div
+                            className="bg-blue-500 h-2 rounded"
+                            style={{ width: `${item.progress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     {item.status === 'completado' && <span className="text-green-600">Completado</span>}
                     {item.status === 'error' && (
-                      <span className="text-red-600">Error: {item.message}</span>
+                      <div className="text-red-600">
+                        Error: {item.message}
+                        <div className="w-full bg-gray-200 h-2 mt-1 rounded">
+                          <div
+                            className="bg-red-500 h-2 rounded"
+                            style={{ width: '5%' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-2">
+                    {item.status === 'error' && (
+                      <button
+                        onClick={() => retryFile(i)}
+                        className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                      >
+                        Reintentar
+                      </button>
                     )}
                   </td>
                 </tr>
