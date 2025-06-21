@@ -115,7 +115,7 @@ const EncryptUploader: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow space-y-4">
-      <h2 className="text-2xl font-bold">Encriptar múltiples archivos</h2>
+      <h2 className="text-2xl text-green-800  font-bold">🔒Encriptar múltiples archivos</h2>
 
       <label className="flex items-center gap-2">
         <input
@@ -123,7 +123,7 @@ const EncryptUploader: React.FC = () => {
           checked={mantenerNombreOriginal}
           onChange={() => setMantenerNombreOriginal(prev => !prev)}
         />
-        Mantener nombre original
+        ✏️Mantener nombre original
       </label>
 
       {!mantenerNombreOriginal && (
@@ -158,12 +158,12 @@ const EncryptUploader: React.FC = () => {
         <>
           <table className="w-full text-sm border mt-4">
             <thead>
-              <tr className="bg-gray-100">
-                <th className="text-left p-2">Archivo</th>
-                <th className="text-left p-2">Tamaño</th>
-                <th className="text-left p-2">Nombre final</th>
-                <th className="text-left p-2">Estado</th>
-                <th className="text-left p-2">Acción</th>
+              <tr className="bg-green-700">
+                <th className="text-center p-2 text-white ">Archivo</th>
+                <th className="text-center p-2  text-white">Tamaño</th>
+                <th className="text-center p-2  text-white">Nombre final</th>
+                <th className="text-center p-2  text-white">Estado</th>
+                <th className="text-center p-2  text-white">Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -214,7 +214,7 @@ const EncryptUploader: React.FC = () => {
 
           <button
             onClick={handleEncryptAll}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 mt-4"
+            className="bg-green-700 text-white px-4 py-2 rounded w-full hover:bg-green-900 disabled:opacity-50 mt-4"
             disabled={encryptionInProgress || (!mantenerNombreOriginal && (!nit.trim() || !tipo))}
           >
             {encryptionInProgress ? 'Procesando...' : 'Encriptar todos'}
