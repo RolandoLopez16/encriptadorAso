@@ -62,10 +62,12 @@ const EncryptUploader: React.FC = () => {
       const baseName = originalName.replace(/\.[^/.]+$/, '')
       const extension = originalName.slice(originalName.lastIndexOf('.'))
 
+      // Descargar automáticamente
       downloadBlob(encBlob, `${baseName}${extension}.enc`)
       downloadBlob(keyBlob, `${baseName}${extension}.key`)
 
-      updateFileStatus(index, 'completado', 100)
+      // Marcar como completado y removerlo de la vista
+      removeFile(index)
     } catch (error: any) {
       console.error(error)
       updateFileStatus(index, 'error', 0, error.message || 'Error desconocido')
@@ -90,12 +92,19 @@ const EncryptUploader: React.FC = () => {
     })
   }
 
+  const removeFile = (index: number) => {
+    setFiles(prev => {
+      return prev.filter((_, i) => i !== index)
+    })
+  }
+
   const handleEncryptAll = async () => {
     setEncryptionInProgress(true)
 
     for (let i = 0; i < files.length; i++) {
-      if (files[i].status === 'pendiente' || files[i].status === 'error') {
-        await encryptFile(files[i], i)
+      const current = files[i]
+      if (current.status === 'pendiente' || current.status === 'error') {
+        await encryptFile(current, i)
       }
     }
 
@@ -146,7 +155,6 @@ const EncryptUploader: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    {item.status === 'completado' && <span className="text-green-600">Completado</span>}
                     {item.status === 'error' && (
                       <div className="text-red-600">
                         Error: {item.message}
@@ -176,7 +184,7 @@ const EncryptUploader: React.FC = () => {
 
           <button
             onClick={handleEncryptAll}
-            className="bg-blue-600 w-full text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 mt-4"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 mt-4"
             disabled={encryptionInProgress}
           >
             {encryptionInProgress ? 'Procesando...' : 'Encriptar todos'}
